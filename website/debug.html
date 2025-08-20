@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HopeHub - 调试版</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, system-ui, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        /* 调试控制台 */
+        .debug-console {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 200px;
+            background: rgba(0, 0, 0, 0.9);
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            padding: 10px;
+            overflow-y: auto;
+            z-index: 9999;
+            border-top: 2px solid #667eea;
+        }
+        
+        .debug-log {
+            margin: 2px 0;
+        }
+        
+        .debug-log.info { color: #0ff; }
+        .debug-log.success { color: #0f0; }
+        .debug-log.error { color: #f00; }
+        .debug-log.warning { color: #ff0; }
+        
+        .hero {
+            text-align: center;
+            padding: 40px 20px;
+            color: white;
+        }
+        
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            animation: glow 2s ease-in-out infinite;
+        }
+        
+        @keyframes glow {
+            0%, 100% { text-shadow: 0 0 20px rgba(255,255,255,0.5); }
+            50% { text-shadow: 0 0 30px rgba(255,255,255,0.8); }
+        }
+        
+        .auth-container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 400px;
+            margin: 20px auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-weight: bold;
+        }
+        
+        .btn:hover {
+            opacity: 0.9;
+        }
+        
+        #dashboard {
+            display: none;
+            background: white;
+            margin: 20px;
+            padding: 40px;
+            border-radius: 20px;
+            margin-bottom: 220px;
+        }
+        
+        .positions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        .position-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .position-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        
+        .user-info {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <!-- 调试控制台 -->
+    <div class="debug-console" id="debugConsole">
+        <div class="debug-log info">🚀 HopeHub 调试模式已启动</div>
+        <div class="debug-log info">📡 API地址: http://192.168.1.17:5000</div>
+        <div class="debug-log info">⏰ 启动时间: <span id="startTime"></span></div>
+    </div>
+    
+    <div class="hero">
+        <h1>🌟 HopeHub</h1>
+        <p style="font-size: 1.3rem;">让每个人成为社区发光者 - LIGHTER</p>
+        <p style="font-size: 0.9rem; opacity: 0.7;">调试模式</p>
+    </div>
+
+    <!-- 登录/注册 -->
+    <div id="authSection">
+        <div class="auth-container">
+            <h2 id="authTitle" style="text-align: center; margin-bottom: 25px;">登录账户</h2>
+            <div class="form-group" id="usernameGroup" style="display: none;">
+                <input type="text" id="authUsername" placeholder="用户名">
+            </div>
+            <div class="form-group">
+                <input type="email" id="authEmail" placeholder="邮箱地址" value="zhang@test.com">
+            </div>
+            <div class="form-group">
+                <input type="password" id="authPassword" placeholder="密码" value="123456">
+            </div>
+            <button class="btn" onclick="handleAuth()">登录</button>
+            <p style="text-align: center; margin-top: 20px;">
+                <a href="#" onclick="toggleAuth(event)" style="color: #667eea;">
+                    没有账户？立即注册
+                </a>
+            </p>
+        </div>
+    </div>
+
+    <!-- 主界面 -->
+    <div id="dashboard">
+        <div class="user-info" id="userInfo">
+            <strong>用户: <span id="username"></span></strong>
+            <p>ID: <span id="userId"></span></p>
+            <p>积分: <span id="userPoints"></span></p>
+            <button onclick="recharge()" style="margin-top: 10px;">充值</button>
+            <button onclick="logout()" style="margin-top: 10px;">退出</button>
+        </div>
+        
+        <h2 style="text-align: center;">选择你的专属位置</h2>
+        <div id="positionsGrid" class="positions-grid"></div>
+    </div>
+
+    <script>
+        // 调试日志系统
+        const debugConsole = document.getElementById('debugConsole');
+        let logCount = 0;
+        
+        function log(message, type = 'info') {
+            logCount++;
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `debug-log ${type}`;
+            logEntry.innerHTML = `[${timestamp}] #${logCount} ${message}`;
+            debugConsole.appendChild(logEntry);
+            debugConsole.scrollTop = debugConsole.scrollHeight;
+            
+            // 同时输出到浏览器控制台
+            console.log(`[HopeHub] ${message}`);
+            
+            // 发送到后端日志（可选）
+            fetch('/api/log', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({message, type, timestamp})
+            }).catch(() => {}); // 忽略日志错误
+        }
+        
+        // 初始化
+        document.getElementById('startTime').textContent = new Date().toLocaleString();
+        
+        let currentUser = null;
+        let isLogin = true;
+        const API_URL = 'http://192.168.1.17:5000';
+        
+        log('页面加载完成', 'success');
+        
+        // 切换登录/注册
+        function toggleAuth(e) {
+            e.preventDefault();
+            isLogin = !isLogin;
+            log(`切换到${isLogin ? '登录' : '注册'}模式`, 'info');
+            
+            document.getElementById('authTitle').textContent = isLogin ? '登录账户' : '注册新账户';
+            document.getElementById('usernameGroup').style.display = isLogin ? 'none' : 'block';
+            document.querySelector('.btn').textContent = isLogin ? '登录' : '注册';
+        }
+        
+        // 处理认证
+        async function handleAuth() {
+            const email = document.getElementById('authEmail').value;
+            const password = document.getElementById('authPassword').value;
+            
+            log(`尝试${isLogin ? '登录' : '注册'}: ${email}`, 'info');
+            
+            if (isLogin) {
+                try {
+                    log(`发送登录请求到 ${API_URL}/api/login`, 'info');
+                    
+                    const response = await fetch(`${API_URL}/api/login`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({email, password})
+                    });
+                    
+                    log(`收到响应: ${response.status}`, response.ok ? 'success' : 'error');
+                    
+                    const result = await response.json();
+                    log(`响应数据: ${JSON.stringify(result)}`, 'info');
+                    
+                    if (result.success) {
+                        currentUser = result.user;
+                        log(`登录成功: ${currentUser.username} (ID: ${currentUser.id})`, 'success');
+                        showDashboard();
+                    } else {
+                        log(`登录失败: ${result.message}`, 'error');
+                        alert('登录失败: ' + result.message);
+                    }
+                } catch(e) {
+                    log(`网络错误: ${e.message}`, 'error');
+                    alert('网络错误: ' + e.message);
+                }
+            } else {
+                // 注册逻辑
+                const username = document.getElementById('authUsername').value;
+                if (!username) {
+                    log('注册失败: 用户名为空', 'error');
+                    alert('请输入用户名');
+                    return;
+                }
+                
+                try {
+                    log(`发送注册请求到 ${API_URL}/api/register`, 'info');
+                    
+                    const response = await fetch(`${API_URL}/api/register`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({username, email, password})
+                    });
+                    
+                    const result = await response.json();
+                    log(`注册响应: ${JSON.stringify(result)}`, result.success ? 'success' : 'error');
+                    
+                    alert(result.message);
+                    if (result.success) {
+                        toggleAuth(new Event('click'));
+                    }
+                } catch(e) {
+                    log(`注册错误: ${e.message}`, 'error');
+                    alert('注册失败: ' + e.message);
+                }
+            }
+        }
+        
+        // 显示主界面
+        function showDashboard() {
+            log('切换到主界面', 'info');
+            
+            document.getElementById('authSection').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            document.getElementById('username').textContent = currentUser.username;
+            document.getElementById('userId').textContent = currentUser.id;
+            document.getElementById('userPoints').textContent = currentUser.points;
+            
+            loadPositions();
+        }
+        
+        // 加载位置
+        async function loadPositions() {
+            log('开始加载位置列表', 'info');
+            
+            try {
+                const response = await fetch(`${API_URL}/api/positions`);
+                const positions = await response.json();
+                
+                log(`成功加载 ${positions.length} 个位置`, 'success');
+                
+                const grid = document.getElementById('positionsGrid');
+                grid.innerHTML = '';
+                
+                const regionNames = {
+                    'beijing': '🏛️ 北京', 'shanghai': '🌃 上海',
+                    'guangzhou': '🌺 广州', 'shenzhen': '💎 深圳',
+                    'boston': '🎓 波士顿', 'newyork': '🗽 纽约',
+                    'sf': '🌉 旧金山', 'la': '🌴 洛杉矶'
+                };
+                
+                const industryNames = {
+                    'restaurant': '🍽️ 餐饮', 'education': '📚 教育',
+                    'retail': '🛍️ 零售', 'service': '🤝 服务',
+                    'health': '💊 健康', 'tech': '💻 科技',
+                    'art': '🎨 艺术', 'tourism': '✈️ 旅游'
+                };
+                
+                // 只显示前16个
+                positions.slice(0, 16).forEach((pos, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'position-card';
+                    card.onclick = () => {
+                        log(`点击位置: ${pos.region}-${pos.industry} (${pos.price}积分)`, 'info');
+                        if (!pos.owner) {
+                            buyPosition(pos.region, pos.industry, pos.price);
+                        } else {
+                            log('该位置已被占用', 'warning');
+                            alert('该位置已被占用');
+                        }
+                    };
+                    
+                    card.innerHTML = `
+                        <h3>${regionNames[pos.region] || pos.region}</h3>
+                        <p>${industryNames[pos.industry] || pos.industry}</p>
+                        <p style="color: #667eea; font-weight: bold;">${pos.price} 积分</p>
+                        ${pos.owner ? 
+                            `<p style="color: #999;">已被占用</p>` : 
+                            `<button onclick="event.stopPropagation();">购买</button>`
+                        }
+                    `;
+                    grid.appendChild(card);
+                });
+                
+                log('位置列表渲染完成', 'success');
+                
+            } catch (error) {
+                log(`加载位置失败: ${error.message}`, 'error');
+            }
+        }
+        
+        // 购买位置
+        async function buyPosition(region, industry, price) {
+            log(`尝试购买位置: ${region}-${industry}`, 'info');
+            
+            if (currentUser.points < price) {
+                log(`积分不足: 需要${price}, 当前${currentUser.points}`, 'warning');
+                if (confirm(`积分不足！需要${price}积分，你只有${currentUser.points}积分。\n是否充值？`)) {
+                    recharge();
+                }
+                return;
+            }
+            
+            if (confirm(`确定花费 ${price} 积分购买这个位置？`)) {
+                try {
+                    log('发送购买请求', 'info');
+                    
+                    const response = await fetch(`${API_URL}/api/buy_position`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            user_id: currentUser.id,
+                            region: region,
+                            industry: industry
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    log(`购买结果: ${result.message}`, result.success ? 'success' : 'error');
+                    
+                    alert(result.message);
+                    if (result.success) {
+                        currentUser.points -= price;
+                        document.getElementById('userPoints').textContent = currentUser.points;
+                        loadPositions();
+                    }
+                } catch(e) {
+                    log(`购买失败: ${e.message}`, 'error');
+                    alert('购买失败: ' + e.message);
+                }
+            }
+        }
+        
+        // 充值
+        async function recharge() {
+            const amount = prompt('充值金额（元）：\n1元 = 10积分');
+            
+            if (amount && amount > 0) {
+                log(`尝试充值 ${amount} 元`, 'info');
+                
+                try {
+                    const response = await fetch(`${API_URL}/api/recharge`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            user_id: currentUser.id,
+                            amount: parseInt(amount)
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    log(`充值结果: ${result.message}`, result.success ? 'success' : 'error');
+                    
+                    alert(result.message);
+                    if (result.success) {
+                        currentUser.points += parseInt(amount) * 10;
+                        document.getElementById('userPoints').textContent = currentUser.points;
+                        log(`积分更新: ${currentUser.points}`, 'success');
+                    }
+                } catch(e) {
+                    log(`充值失败: ${e.message}`, 'error');
+                    alert('充值失败: ' + e.message);
+                }
+            }
+        }
+        
+        // 退出
+        function logout() {
+            log('用户退出登录', 'info');
+            currentUser = null;
+            document.getElementById('authSection').style.display = 'block';
+            document.getElementById('dashboard').style.display = 'none';
+        }
+        
+        // 监听所有点击事件
+        document.addEventListener('click', function(e) {
+            if (e.target.tagName === 'BUTTON' || e.target.tagName === 'A') {
+                log(`点击: ${e.target.textContent}`, 'info');
+            }
+        });
+        
+        // 监听所有输入事件
+        document.addEventListener('input', function(e) {
+            if (e.target.tagName === 'INPUT') {
+                log(`输入: ${e.target.placeholder} = ${e.target.value}`, 'info');
+            }
+        });
+        
+        // 捕获所有错误
+        window.addEventListener('error', function(e) {
+            log(`错误: ${e.message}`, 'error');
+        });
+        
+        log('调试系统初始化完成', 'success');
+    </script>
+</body>
+</html>

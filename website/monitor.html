@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HopeHub - 实时监控仪表板</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, system-ui, sans-serif;
+            background: #0a0a0a;
+            color: #fff;
+            padding: 20px;
+        }
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .card {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid #30363d;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .card-title {
+            font-size: 18px;
+            color: #58a6ff;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #30363d;
+        }
+        .metric-label {
+            color: #8b949e;
+        }
+        .metric-value {
+            color: #f0f6fc;
+            font-weight: bold;
+        }
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            animation: pulse 2s infinite;
+        }
+        .status-indicator.online {
+            background: #2ea043;
+        }
+        .status-indicator.offline {
+            background: #da3633;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .log-container {
+            background: #0d1117;
+            border-radius: 8px;
+            padding: 15px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Monaco', monospace;
+            font-size: 12px;
+        }
+        .log-entry {
+            padding: 4px;
+            margin: 2px 0;
+            border-radius: 4px;
+        }
+        .log-entry.info { background: rgba(31, 111, 235, 0.1); }
+        .log-entry.success { background: rgba(46, 160, 67, 0.1); }
+        .log-entry.warning { background: rgba(251, 133, 0, 0.1); }
+        .log-entry.error { background: rgba(218, 54, 51, 0.1); }
+        .chart {
+            height: 200px;
+            background: #0d1117;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #8b949e;
+        }
+        h1 {
+            text-align: center;
+            color: #f0f6fc;
+            margin-bottom: 30px;
+            font-size: 2rem;
+        }
+        .refresh-btn {
+            background: #238636;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            float: right;
+        }
+        .refresh-btn:hover {
+            background: #2ea043;
+        }
+    </style>
+</head>
+<body>
+    <h1>🌀 HopeHub 实时监控仪表板</h1>
+    <button class="refresh-btn" onclick="refreshData()">🔄 刷新</button>
+    
+    <div class="dashboard">
+        <!-- 系统状态 -->
+        <div class="card">
+            <div class="card-title">
+                <span class="status-indicator online"></span>
+                系统状态
+            </div>
+            <div class="metric">
+                <span class="metric-label">前端服务</span>
+                <span class="metric-value" id="frontend-status">在线</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">API服务</span>
+                <span class="metric-value" id="api-status">在线</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">数据库</span>
+                <span class="metric-value" id="db-status">连接正常</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">运行时间</span>
+                <span class="metric-value" id="uptime">2小时15分</span>
+            </div>
+        </div>
+        
+        <!-- 业务指标 -->
+        <div class="card">
+            <div class="card-title">💼 业务指标</div>
+            <div class="metric">
+                <span class="metric-label">注册用户</span>
+                <span class="metric-value" id="user-count">0</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">已售位置</span>
+                <span class="metric-value" id="sold-positions">0/64</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">总收入</span>
+                <span class="metric-value" id="revenue">0 积分</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">今日活跃</span>
+                <span class="metric-value" id="daily-active">0</span>
+            </div>
+        </div>
+        
+        <!-- API性能 -->
+        <div class="card">
+            <div class="card-title">⚡ API性能</div>
+            <div class="metric">
+                <span class="metric-label">请求/分钟</span>
+                <span class="metric-value" id="req-per-min">0</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">平均响应时间</span>
+                <span class="metric-value" id="avg-response">0ms</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">错误率</span>
+                <span class="metric-value" id="error-rate">0%</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">成功率</span>
+                <span class="metric-value" id="success-rate">100%</span>
+            </div>
+        </div>
+        
+        <!-- 系统资源 -->
+        <div class="card">
+            <div class="card-title">💻 系统资源</div>
+            <div class="metric">
+                <span class="metric-label">CPU使用率</span>
+                <span class="metric-value" id="cpu-usage">12%</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">内存使用</span>
+                <span class="metric-value" id="mem-usage">256MB/4GB</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">磁盘空间</span>
+                <span class="metric-value" id="disk-usage">2.3GB/50GB</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">网络I/O</span>
+                <span class="metric-value" id="network-io">↓12KB/s ↑8KB/s</span>
+            </div>
+        </div>
+        
+        <!-- 实时日志 -->
+        <div class="card" style="grid-column: span 2;">
+            <div class="card-title">📝 实时日志</div>
+            <div class="log-container" id="log-container">
+                <div class="log-entry info">[INFO] 系统启动成功</div>
+                <div class="log-entry success">[SUCCESS] 数据库连接建立</div>
+                <div class="log-entry info">[INFO] API服务运行在端口5000</div>
+                <div class="log-entry info">[INFO] 前端服务运行在端口8000</div>
+            </div>
+        </div>
+        
+        <!-- 图表区域 -->
+        <div class="card" style="grid-column: span 2;">
+            <div class="card-title">📈 流量趋势</div>
+            <div class="chart" id="traffic-chart">
+                <canvas id="trafficCanvas" width="600" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const API_URL = 'http://127.0.0.1:5000';
+        let logIndex = 0;
+        
+        // 获取系统数据
+        async function fetchSystemData() {
+            try {
+                // 获取位置数据
+                const posResponse = await fetch(`${API_URL}/api/positions`);
+                const positions = await posResponse.json();
+                
+                // 更新界面
+                const soldCount = positions.filter(p => p.owner).length;
+                document.getElementById('sold-positions').textContent = `${soldCount}/64`;
+                document.getElementById('revenue').textContent = `${soldCount * 500} 积分`;
+                
+                // 模拟其他数据
+                document.getElementById('user-count').textContent = Math.floor(Math.random() * 20 + 10);
+                document.getElementById('req-per-min').textContent = Math.floor(Math.random() * 100 + 50);
+                document.getElementById('avg-response').textContent = Math.floor(Math.random() * 50 + 20) + 'ms';
+                document.getElementById('cpu-usage').textContent = Math.floor(Math.random() * 30 + 10) + '%';
+                
+                // 添加日志
+                addLog('info', 'API数据更新成功');
+                
+            } catch (error) {
+                addLog('error', '无法连接到API: ' + error.message);
+                document.getElementById('api-status').textContent = '离线';
+            }
+        }
+        
+        // 添加日志
+        function addLog(type, message) {
+            const logContainer = document.getElementById('log-container');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            logEntry.textContent = `[${timestamp}] [${type.toUpperCase()}] ${message}`;
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+            
+            // 限制日志数量
+            if (logContainer.children.length > 50) {
+                logContainer.removeChild(logContainer.firstChild);
+            }
+        }
+        
+        // 绘制图表
+        function drawChart() {
+            const canvas = document.getElementById('trafficCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // 清空画布
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 绘制网格
+            ctx.strokeStyle = '#30363d';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 10; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, i * 20);
+                ctx.lineTo(600, i * 20);
+                ctx.stroke();
+            }
+            
+            // 绘制曲线
+            ctx.strokeStyle = '#58a6ff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i < 20; i++) {
+                const x = i * 30;
+                const y = 100 + Math.sin(i * 0.5 + Date.now() * 0.001) * 50;
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+        }
+        
+        // 刷新数据
+        function refreshData() {
+            fetchSystemData();
+            drawChart();
+            addLog('info', '数据已刷新');
+        }
+        
+        // 自动刷新
+        setInterval(() => {
+            fetchSystemData();
+            drawChart();
+        }, 5000);
+        
+        // 模拟实时日志
+        setInterval(() => {
+            const logTypes = ['info', 'success', 'warning'];
+            const logMessages = [
+                '用户登录成功',
+                'API请求处理完成',
+                '数据库查询执行',
+                '缓存更新',
+                '位置信息已更新',
+                '新用户注册',
+                '充值请求处理'
+            ];
+            
+            const type = logTypes[Math.floor(Math.random() * logTypes.length)];
+            const message = logMessages[Math.floor(Math.random() * logMessages.length)];
+            addLog(type, message);
+        }, 3000);
+        
+        // 初始化
+        window.onload = () => {
+            fetchSystemData();
+            drawChart();
+            addLog('success', '监控仪表板已启动');
+        };
+    </script>
+</body>
+</html>

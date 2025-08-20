@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HopeHub Dashboard - 控制中心</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #ec4899;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #0f172a;
+            --light: #f8fafc;
+            --sidebar-width: 280px;
+        }
+        
+        body {
+            font-family: -apple-system, 'SF Pro Display', 'Inter', sans-serif;
+            background: #0f0f23;
+            color: var(--light);
+        }
+        
+        /* 布局 */
+        .dashboard-container {
+            display: flex;
+            height: 100vh;
+        }
+        
+        /* 侧边栏 */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, #1e1e3f 0%, #0f0f23 100%);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 30px 20px;
+            overflow-y: auto;
+        }
+        
+        .sidebar-logo {
+            font-size: 28px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 40px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .sidebar-menu {
+            list-style: none;
+        }
+        
+        .sidebar-item {
+            margin-bottom: 10px;
+        }
+        
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px 20px;
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            border-radius: 12px;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+        
+        .sidebar-link:hover {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--primary);
+            transform: translateX(5px);
+        }
+        
+        .sidebar-link.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        /* 主内容区 */
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 30px;
+        }
+        
+        /* 顶部栏 */
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+            padding: 20px 30px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .search-box {
+            flex: 1;
+            max-width: 400px;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 12px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50px;
+            color: white;
+            font-size: 14px;
+        }
+        
+        .search-input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        /* 统计卡片 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 25px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.2);
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 10px;
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff 0%, #a78bfa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .stat-change {
+            font-size: 12px;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .stat-change.positive {
+            color: var(--success);
+        }
+        
+        .stat-change.negative {
+            color: var(--danger);
+        }
+        
+        /* 位置网格 */
+        .positions-section {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 20px;
+            padding: 30px;
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        
+        .section-title {
+            font-size: 24px;
+            font-weight: 700;
+        }
+        
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .filter-btn {
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50px;
+            color: rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+        
+        .filter-btn:hover,
+        .filter-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        .positions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        
+        .position-card {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(236, 72, 153, 0.1) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .position-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .position-card:hover::before {
+            opacity: 1;
+        }
+        
+        .position-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 15px 40px rgba(99, 102, 241, 0.3);
+        }
+        
+        .position-icon {
+            font-size: 36px;
+            margin-bottom: 15px;
+        }
+        
+        .position-city {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .position-industry {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 15px;
+        }
+        
+        .position-price {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .position-status {
+            margin-top: 15px;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .status-available {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+        }
+        
+        .status-occupied {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+        
+        /* 动画 */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .stat-card {
+            animation: slideIn 0.5s ease-out;
+        }
+        
+        .position-card {
+            animation: slideIn 0.5s ease-out;
+        }
+        
+        /* 响应式 */
+        @media (max-width: 1024px) {
+            .sidebar {
+                position: fixed;
+                left: -100%;
+                z-index: 1000;
+                transition: left 0.3s;
+            }
+            
+            .sidebar.open {
+                left: 0;
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- 侧边栏 -->
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <span>🌟</span>
+                <span>HopeHub</span>
+            </div>
+            
+            <ul class="sidebar-menu">
+                <li class="sidebar-item">
+                    <a href="#" class="sidebar-link active">
+                        <span>📊</span>
+                        <span>仪表板</span>
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a href="#" class="sidebar-link">
+                        <span>🗺️</span>
+                        <span>位置管理</span>
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a href="#" class="sidebar-link">
+                        <span>💰</span>
+                        <span>积分充值</span>
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a href="#" class="sidebar-link">
+                        <span>📈</span>
+                        <span>数据分析</span>
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a href="/monitor.html" class="sidebar-link">
+                        <span>🔍</span>
+                        <span>系统监控</span>
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a href="#" class="sidebar-link">
+                        <span>⚙️</span>
+                        <span>设置</span>
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a href="/" class="sidebar-link">
+                        <span>🚪</span>
+                        <span>退出</span>
+                    </a>
+                </li>
+            </ul>
+        </aside>
+        
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- 顶部栏 -->
+            <div class="topbar">
+                <div class="search-box">
+                    <input type="text" class="search-input" placeholder="搜索位置、城市或行业...">
+                </div>
+                
+                <div class="user-info">
+                    <span>欢迎回来，用户</span>
+                    <div class="user-avatar">U</div>
+                </div>
+            </div>
+            
+            <!-- 统计卡片 -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">总位置</div>
+                    <div class="stat-value">64</div>
+                    <div class="stat-change positive">
+                        <span>↑</span>
+                        <span>全部可用</span>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-label">已售位置</div>
+                    <div class="stat-value">9</div>
+                    <div class="stat-change positive">
+                        <span>↑</span>
+                        <span>14.1%</span>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-label">我的积分</div>
+                    <div class="stat-value">1,100</div>
+                    <div class="stat-change positive">
+                        <span>↑</span>
+                        <span>+100 今日</span>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-label">活跃用户</div>
+                    <div class="stat-value">24</div>
+                    <div class="stat-change positive">
+                        <span>↑</span>
+                        <span>+2 新用户</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 位置网格 -->
+            <div class="positions-section">
+                <div class="section-header">
+                    <h2 class="section-title">选择您的位置</h2>
+                    <div class="filter-buttons">
+                        <button class="filter-btn active">全部</button>
+                        <button class="filter-btn">可用</button>
+                        <button class="filter-btn">已售</button>
+                        <button class="filter-btn">热门</button>
+                    </div>
+                </div>
+                
+                <div class="positions-grid" id="positionsGrid">
+                    <!-- 位置卡片将通过JS动态加载 -->
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script>
+        // 城市和行业映射
+        const cityNames = {
+            'beijing': '北京',
+            'shanghai': '上海',
+            'guangzhou': '广州',
+            'shenzhen': '深圳',
+            'boston': '波士顿',
+            'newyork': '纽约',
+            'sf': '旧金山',
+            'la': '洛杉矶'
+        };
+        
+        const industryNames = {
+            'restaurant': '餐饮',
+            'education': '教育',
+            'retail': '零售',
+            'service': '服务',
+            'health': '健康',
+            'tech': '科技',
+            'art': '艺术',
+            'tourism': '旅游'
+        };
+        
+        const industryIcons = {
+            'restaurant': '🍽️',
+            'education': '🎓',
+            'retail': '🛍️',
+            'service': '🤝',
+            'health': '💊',
+            'tech': '💻',
+            'art': '🎨',
+            'tourism': '✈️'
+        };
+        
+        // 加载位置数据
+        async function loadPositions() {
+            try {
+                const response = await fetch('http://127.0.0.1:5000/api/positions');
+                const positions = await response.json();
+                
+                const grid = document.getElementById('positionsGrid');
+                grid.innerHTML = '';
+                
+                positions.forEach((pos, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'position-card';
+                    card.style.animationDelay = `${index * 0.05}s`;
+                    
+                    const isOccupied = pos.owner ? true : false;
+                    
+                    card.innerHTML = `
+                        <div class="position-icon">${industryIcons[pos.industry] || '📍'}</div>
+                        <div class="position-city">${cityNames[pos.region] || pos.region}</div>
+                        <div class="position-industry">${industryNames[pos.industry] || pos.industry}</div>
+                        <div class="position-price">${pos.price} 积分</div>
+                        <div class="position-status ${isOccupied ? 'status-occupied' : 'status-available'}">
+                            ${isOccupied ? '已占用' : '可购买'}
+                        </div>
+                    `;
+                    
+                    if (!isOccupied) {
+                        card.onclick = () => buyPosition(pos.region, pos.industry, pos.price);
+                    }
+                    
+                    grid.appendChild(card);
+                });
+            } catch (error) {
+                console.error('加载位置失败:', error);
+                // 显示模拟数据
+                displayMockData();
+            }
+        }
+        
+        // 显示模拟数据
+        function displayMockData() {
+            const grid = document.getElementById('positionsGrid');
+            grid.innerHTML = '';
+            
+            // 创建16个示例位置
+            for (let i = 0; i < 16; i++) {
+                const cities = Object.keys(cityNames);
+                const industries = Object.keys(industryNames);
+                
+                const city = cities[i % cities.length];
+                const industry = industries[i % industries.length];
+                
+                const card = document.createElement('div');
+                card.className = 'position-card';
+                card.style.animationDelay = `${i * 0.05}s`;
+                
+                card.innerHTML = `
+                    <div class="position-icon">${industryIcons[industry]}</div>
+                    <div class="position-city">${cityNames[city]}</div>
+                    <div class="position-industry">${industryNames[industry]}</div>
+                    <div class="position-price">500 积分</div>
+                    <div class="position-status status-available">可购买</div>
+                `;
+                
+                grid.appendChild(card);
+            }
+        }
+        
+        // 购买位置
+        function buyPosition(region, industry, price) {
+            if (confirm(`确认购买 ${cityNames[region]} - ${industryNames[industry]} 位置？\n需要 ${price} 积分`)) {
+                // 实际购买逻辑
+                alert('购买功能即将上线！');
+            }
+        }
+        
+        // 过滤按钮功能
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                // 这里可以添加实际的过滤逻辑
+            });
+        });
+        
+        // 页面加载时加载数据
+        loadPositions();
+        
+        // 每30秒刷新一次数据
+        setInterval(loadPositions, 30000);
+    </script>
+    <script>
+    // 添加购买流程入口
+    setTimeout(() => {
+        const btn = document.createElement("button");
+        btn.innerHTML = "🛒 完整购买流程";
+        btn.style.cssText = "position: fixed; bottom: 20px; right: 20px; padding: 15px 25px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 50px; font-size: 16px; font-weight: bold; cursor: pointer; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.3);";
+        btn.onclick = () => window.location.href = "/purchase_flow.html";
+        document.body.appendChild(btn);
+    }, 100);
+    </script>
+</body>
+</html>

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>HopeHub - Stripe支付</title>
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 30px;
+        }
+        .position-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 18px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .price {
+            font-size: 32px;
+            font-weight: bold;
+            color: #10b981;
+            margin: 20px 0;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 20px;
+            display: none;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            display: block;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💳 Stripe支付测试</h1>
+        
+        <div class="position-card">
+            <h3>📍 独家位置</h3>
+            <p>ZIP Code: 10001</p>
+            <p>行业: 科技</p>
+            <div class="price">$10.00</div>
+        </div>
+        
+        <button class="btn" id="payButton" onclick="createPayment()">
+            使用Stripe支付
+        </button>
+        
+        <div id="status" class="status"></div>
+        
+        <p style="margin-top: 20px; color: #666; font-size: 14px;">
+            测试卡号: 4242 4242 4242 4242<br>
+            有效期: 任意未来日期<br>
+            CVV: 任意3位数字
+        </p>
+    </div>
+    
+    <script>
+        async function createPayment() {
+            const button = document.getElementById('payButton');
+            const status = document.getElementById('status');
+            
+            // 禁用按钮
+            button.disabled = true;
+            button.textContent = '处理中...';
+            status.className = 'status';
+            status.textContent = '';
+            
+            try {
+                // 创建支付会话
+                const response = await fetch('http://192.168.1.17:5000/api/create_payment', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        user_id: 1,
+                        position_id: 1,
+                        amount: 10
+                    })
+                });
+                
+                const data = await response.json();
+                console.log('Payment response:', data);
+                
+                if (data.success && data.checkout_url) {
+                    status.className = 'status success';
+                    status.textContent = '正在跳转到支付页面...';
+                    
+                    // 跳转到Stripe Checkout
+                    setTimeout(() => {
+                        window.location.href = data.checkout_url;
+                    }, 1000);
+                } else {
+                    status.className = 'status error';
+                    status.textContent = '创建支付失败: ' + (data.error || '未知错误');
+                    button.disabled = false;
+                    button.textContent = '使用Stripe支付';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                status.className = 'status error';
+                status.textContent = '网络错误: ' + error.message;
+                button.disabled = false;
+                button.textContent = '使用Stripe支付';
+            }
+        }
+    </script>
+</body>
+</html>

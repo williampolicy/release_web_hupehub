@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HopeHub - 让每个人成为社区发光者</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, system-ui, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .hero {
+            text-align: center;
+            padding: 40px 20px;
+            color: white;
+        }
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            animation: glow 2s ease-in-out infinite;
+        }
+        @keyframes glow {
+            0%, 100% { text-shadow: 0 0 20px rgba(255,255,255,0.5); }
+            50% { text-shadow: 0 0 30px rgba(255,255,255,0.8); }
+        }
+        .auth-container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 400px;
+            margin: 20px auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-weight: bold;
+        }
+        #dashboard {
+            display: none;
+            background: white;
+            margin: 20px;
+            padding: 40px;
+            border-radius: 20px;
+        }
+        .positions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 30px;
+        }
+        .position-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .position-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .position-card.occupied {
+            background: #e0e0e0;
+            cursor: not-allowed;
+        }
+        .user-info {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <h1>🌟 HopeHub</h1>
+        <p style="font-size: 1.3rem;">让每个人成为社区发光者 - LIGHTER</p>
+    </div>
+
+    <!-- 登录/注册 -->
+    <div id="authSection">
+        <div class="auth-container">
+            <h2 id="authTitle" style="text-align: center; margin-bottom: 25px;">登录账户</h2>
+            <div class="form-group" id="usernameGroup" style="display: none;">
+                <input type="text" id="authUsername" placeholder="用户名">
+            </div>
+            <div class="form-group">
+                <input type="email" id="authEmail" placeholder="邮箱地址">
+            </div>
+            <div class="form-group">
+                <input type="password" id="authPassword" placeholder="密码">
+            </div>
+            <button class="btn" onclick="handleAuth()">登录</button>
+            <p style="text-align: center; margin-top: 20px;">
+                <a href="#" onclick="toggleAuth(event)" style="color: #667eea;">
+                    没有账户？立即注册
+                </a>
+            </p>
+        </div>
+    </div>
+
+    <!-- 主界面 -->
+    <div id="dashboard">
+        <div class="user-info" id="userInfo">
+            <strong>用户: <span id="username"></span></strong>
+            <p>积分: <span id="userPoints"></span></p>
+            <button onclick="logout()" style="margin-top: 10px;">退出</button>
+        </div>
+        
+        <h2 style="text-align: center;">选择你的专属位置</h2>
+        <div id="positionsGrid" class="positions-grid"></div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let isLogin = true;
+
+        function toggleAuth(e) {
+            e.preventDefault();
+            isLogin = !isLogin;
+            document.getElementById('authTitle').textContent = isLogin ? '登录账户' : '注册新账户';
+            document.getElementById('usernameGroup').style.display = isLogin ? 'none' : 'block';
+            document.querySelector('.btn').textContent = isLogin ? '登录' : '注册';
+        }
+
+        async function handleAuth() {
+            const email = document.getElementById('authEmail').value;
+            const password = document.getElementById('authPassword').value;
+            
+            if (isLogin) {
+                // 模拟登录成功
+                if (email === 'zhang@test.com' && password === '123456') {
+                    currentUser = {username: '张老板', points: 1100};
+                    showDashboard();
+                } else {
+                    alert('测试账户:\nzhang@test.com / 123456');
+                }
+            } else {
+                const username = document.getElementById('authUsername').value;
+                if (username && email && password) {
+                    alert('注册成功！请登录');
+                    toggleAuth(new Event('click'));
+                }
+            }
+        }
+
+        function showDashboard() {
+            document.getElementById('authSection').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            document.getElementById('username').textContent = currentUser.username;
+            document.getElementById('userPoints').textContent = currentUser.points;
+            loadPositions();
+        }
+
+        async function loadPositions() {
+            // 使用实际API
+            try {
+                const response = await fetch('http://192.168.1.17:5000/api/positions');
+                const positions = await response.json();
+                
+                const grid = document.getElementById('positionsGrid');
+                grid.innerHTML = '';
+                
+                const regionNames = {
+                    'beijing': '北京', 'shanghai': '上海', 'guangzhou': '广州', 'shenzhen': '深圳',
+                    'boston': '波士顿', 'newyork': '纽约', 'sf': '旧金山', 'la': '洛杉矶'
+                };
+                
+                const industryNames = {
+                    'restaurant': '餐饮', 'education': '教育', 'retail': '零售', 'service': '服务',
+                    'health': '健康', 'tech': '科技', 'art': '艺术', 'tourism': '旅游'
+                };
+                
+                // 只显示前16个位置（示例）
+                positions.slice(0, 16).forEach(pos => {
+                    const card = document.createElement('div');
+                    card.className = 'position-card' + (pos.owner ? ' occupied' : '');
+                    card.innerHTML = `
+                        <h3>${regionNames[pos.region]}</h3>
+                        <p>${industryNames[pos.industry]}</p>
+                        <p style="color: #667eea; font-weight: bold;">${pos.price} 积分</p>
+                        ${pos.owner ? `<p style="color: #999;">已占用</p>` : '<button>购买</button>'}
+                    `;
+                    grid.appendChild(card);
+                });
+            } catch (error) {
+                console.error('加载失败:', error);
+                // 使用模拟数据
+                const grid = document.getElementById('positionsGrid');
+                for(let i = 0; i < 16; i++) {
+                    const card = document.createElement('div');
+                    card.className = 'position-card';
+                    card.innerHTML = `<h3>位置 ${i+1}</h3><p>500 积分</p>`;
+                    grid.appendChild(card);
+                }
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            document.getElementById('authSection').style.display = 'block';
+            document.getElementById('dashboard').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

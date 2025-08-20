@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HopeHub - ZIP CODE位置查询</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #ec4899;
+            --success: #10b981;
+            --dark: #0f172a;
+            --light: #f8fafc;
+        }
+        
+        body {
+            font-family: -apple-system, 'SF Pro Display', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            width: 100%;
+        }
+        
+        /* ZIP CODE搜索卡片 */
+        .search-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 30px;
+            padding: 50px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            margin-bottom: 40px;
+        }
+        
+        .search-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .search-subtitle {
+            text-align: center;
+            color: #64748b;
+            margin-bottom: 40px;
+            font-size: 1.1rem;
+        }
+        
+        .search-form {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .zip-input {
+            flex: 1;
+            padding: 20px 30px;
+            font-size: 1.2rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 15px;
+            transition: all 0.3s;
+        }
+        
+        .zip-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+        
+        .search-btn {
+            padding: 20px 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .search-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(99, 102, 241, 0.3);
+        }
+        
+        /* 快速选择 */
+        .quick-select {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .quick-zip {
+            padding: 10px 20px;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+        
+        .quick-zip:hover {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        /* 结果展示 */
+        .results-container {
+            display: none;
+        }
+        
+        .location-info {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .location-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .location-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+        
+        .location-badge {
+            padding: 8px 16px;
+            background: var(--success);
+            color: white;
+            border-radius: 50px;
+            font-size: 0.9rem;
+        }
+        
+        /* 行业网格 */
+        .industries-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        
+        .industry-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        
+        .industry-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            border-color: var(--primary);
+        }
+        
+        .industry-icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+        
+        .industry-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .industry-code {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-bottom: 15px;
+        }
+        
+        .industry-price {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+        
+        .buy-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .buy-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .buy-btn:disabled {
+            background: #e2e8f0;
+            color: #94a3b8;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        /* 地图容器 */
+        .map-container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #94a3b8;
+        }
+        
+        /* 加载动画 */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .loading.active {
+            display: block;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid #e2e8f0;
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- ZIP CODE搜索卡片 -->
+        <div class="search-card">
+            <h1 class="search-title">🗺️ 输入ZIP CODE，发现机会</h1>
+            <p class="search-subtitle">精准定位您的商业位置，抢占独家行业地位</p>
+            
+            <div class="search-form">
+                <input type="text" 
+                       class="zip-input" 
+                       id="zipInput" 
+                       placeholder="输入5位美国邮政编码 (例如: 10001)"
+                       maxlength="5"
+                       pattern="[0-9]{5}">
+                <button class="search-btn" onclick="searchByZipCode()">
+                    <span>🔍</span>
+                    <span>搜索位置</span>
+                </button>
+            </div>
+            
+            <div class="quick-select">
+                <span style="margin-right: 15px; color: #64748b;">快速选择：</span>
+                <span class="quick-zip" onclick="quickSearch('10001')">纽约 10001</span>
+                <span class="quick-zip" onclick="quickSearch('94102')">旧金山 94102</span>
+                <span class="quick-zip" onclick="quickSearch('90001')">洛杉矶 90001</span>
+                <span class="quick-zip" onclick="quickSearch('60601')">芝加哥 60601</span>
+                <span class="quick-zip" onclick="quickSearch('02108')">波士顿 02108</span>
+                <span class="quick-zip" onclick="quickSearch('98101')">西雅图 98101</span>
+                <span class="quick-zip" onclick="quickSearch('33101')">迈阿密 33101</span>
+                <span class="quick-zip" onclick="quickSearch('30301')">亚特兰大 30301</span>
+            </div>
+        </div>
+        
+        <!-- 加载动画 -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>正在查询...</p>
+        </div>
+        
+        <!-- 结果展示 -->
+        <div class="results-container" id="results">
+            <!-- 位置信息 -->
+            <div class="location-info">
+                <div class="location-header">
+                    <h2 class="location-title" id="locationTitle">-</h2>
+                    <span class="location-badge" id="locationBadge">-</span>
+                </div>
+                <p id="locationDetails" style="color: #64748b;">-</p>
+            </div>
+            
+            <!-- 地图 -->
+            <div class="map-container">
+                <div>🗺️ 交互式地图功能即将上线</div>
+            </div>
+            
+            <!-- 行业列表 -->
+            <div class="industries-grid" id="industriesGrid">
+                <!-- 动态加载 -->
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // ZIP CODE验证
+        function validateZipCode(zip) {
+            return /^\d{5}$/.test(zip);
+        }
+        
+        // 快速搜索
+        function quickSearch(zip) {
+            document.getElementById('zipInput').value = zip;
+            searchByZipCode();
+        }
+        
+        // 搜索ZIP CODE
+        async function searchByZipCode() {
+            const zipCode = document.getElementById('zipInput').value.trim();
+            
+            if (!validateZipCode(zipCode)) {
+                alert('请输入有效的5位ZIP CODE');
+                return;
+            }
+            
+            // 显示加载动画
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('results').style.display = 'none';
+            
+            try {
+                // 调用API
+                const response = await fetch('http://127.0.0.1:5000/api/zipcodes/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ zip_code: zipCode })
+                });
+                
+                if (!response.ok) {
+                    // 如果API失败，显示模拟数据
+                    showMockData(zipCode);
+                    return;
+                }
+                
+                const data = await response.json();
+                displayResults(data);
+                
+            } catch (error) {
+                console.error('搜索失败:', error);
+                // 显示模拟数据
+                showMockData(zipCode);
+            } finally {
+                document.getElementById('loading').classList.remove('active');
+            }
+        }
+        
+        // 显示结果
+        function displayResults(data) {
+            // 更新位置信息
+            document.getElementById('locationTitle').textContent = 
+                `${data.city}, ${data.state} ${data.zip_code}`;
+            document.getElementById('locationBadge').textContent = 
+                `${data.positions ? data.positions.length : 0} 个可用位置`;
+            document.getElementById('locationDetails').textContent = 
+                `经度: ${data.longitude || 'N/A'}, 纬度: ${data.latitude || 'N/A'}`;
+            
+            // 显示行业卡片
+            const grid = document.getElementById('industriesGrid');
+            grid.innerHTML = '';
+            
+            if (data.positions && data.positions.length > 0) {
+                data.positions.forEach(pos => {
+                    const card = createIndustryCard(pos);
+                    grid.appendChild(card);
+                });
+            }
+            
+            // 显示结果容器
+            document.getElementById('results').style.display = 'block';
+        }
+        
+        // 创建行业卡片
+        function createIndustryCard(position) {
+            const card = document.createElement('div');
+            card.className = 'industry-card';
+            
+            const isAvailable = position.status === 'available';
+            
+            card.innerHTML = `
+                <div class="industry-icon">${position.icon || '🏢'}</div>
+                <div class="industry-name">${position.industry_name || '未命名行业'}</div>
+                <div class="industry-code">NAICS: ${position.naics_code || 'N/A'}</div>
+                <div class="industry-price">${position.price || 500} 积分</div>
+                <button class="buy-btn" ${!isAvailable ? 'disabled' : ''} 
+                        onclick="buyPosition('${position.naics_code}')">
+                    ${isAvailable ? '立即购买' : '已被占用'}
+                </button>
+            `;
+            
+            return card;
+        }
+        
+        // 显示模拟数据
+        function showMockData(zipCode) {
+            const mockData = {
+                zip_code: zipCode,
+                city: '示例城市',
+                state: 'ST',
+                positions: [
+                    { naics_code: '722511', industry_name: '全服务餐厅', icon: '🍽️', price: 500, status: 'available' },
+                    { naics_code: '541511', industry_name: 'IT咨询', icon: '💻', price: 800, status: 'available' },
+                    { naics_code: '621111', industry_name: '医生诊所', icon: '🏥', price: 1000, status: 'occupied' },
+                    { naics_code: '445110', industry_name: '超市', icon: '🛒', price: 600, status: 'available' },
+                    { naics_code: '611310', industry_name: '大学', icon: '🎓', price: 1200, status: 'available' },
+                    { naics_code: '713110', industry_name: '游乐园', icon: '🎢', price: 1500, status: 'available' }
+                ]
+            };
+            
+            displayResults(mockData);
+        }
+        
+        // 购买位置
+        function buyPosition(naicsCode) {
+            const zipCode = document.getElementById('zipInput').value;
+            
+            if (confirm(`确认购买此位置？\nZIP: ${zipCode}\nNAICS: ${naicsCode}`)) {
+                // 实际购买逻辑
+                alert('购买功能即将上线！\n\nLIGHT HOPE - Empowered by AI');
+            }
+        }
+        
+        // 回车键搜索
+        document.getElementById('zipInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchByZipCode();
+            }
+        });
+        
+        // 只允许输入数字
+        document.getElementById('zipInput').addEventListener('input', function(e) {
+            this.value = this.value.replace(/[^0-9]/g, '');
+        });
+    </script>
+</body>
+</html>

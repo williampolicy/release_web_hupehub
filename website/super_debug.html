@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>HopeHub - Super Debug CELL</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'SF Pro Display', -apple-system, system-ui, sans-serif;
+            background: #0a0a0a;
+            color: #fff;
+            height: 100vh;
+            display: grid;
+            grid-template-rows: 60px 1fr 300px;
+            overflow: hidden;
+        }
+        
+        /* 顶部状态栏 */
+        .status-bar {
+            background: linear-gradient(90deg, #1a1a2e, #16213e);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            border-bottom: 2px solid #0f3460;
+        }
+        
+        .status-item {
+            margin: 0 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-indicator.active {
+            background: #00ff00;
+        }
+        
+        .status-indicator.inactive {
+            background: #ff0000;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* 主内容区 */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 2px;
+            background: #1a1a1a;
+            overflow: hidden;
+        }
+        
+        .app-view {
+            background: white;
+            overflow-y: auto;
+        }
+        
+        .cell-monitor {
+            background: #0d1117;
+            padding: 20px;
+            overflow-y: auto;
+            border-left: 2px solid #30363d;
+        }
+        
+        .cell-card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .cell-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .cell-name {
+            font-weight: bold;
+            color: #58a6ff;
+        }
+        
+        .cell-status {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .cell-status.running {
+            background: #2ea043;
+            color: white;
+        }
+        
+        .cell-status.stopped {
+            background: #da3633;
+            color: white;
+        }
+        
+        .cell-metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .metric {
+            font-size: 12px;
+            color: #8b949e;
+        }
+        
+        .metric-value {
+            color: #f0f6fc;
+            font-weight: bold;
+        }
+        
+        /* 调试控制台 */
+        .debug-console {
+            background: #0d1117;
+            border-top: 2px solid #30363d;
+            display: grid;
+            grid-template-rows: 40px 1fr;
+        }
+        
+        .console-tabs {
+            background: #161b22;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            border-bottom: 1px solid #30363d;
+        }
+        
+        .console-tab {
+            padding: 8px 15px;
+            margin-right: 5px;
+            background: transparent;
+            color: #8b949e;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px 4px 0 0;
+            transition: all 0.3s;
+        }
+        
+        .console-tab.active {
+            background: #0d1117;
+            color: #f0f6fc;
+            border: 1px solid #30363d;
+            border-bottom: none;
+        }
+        
+        .console-content {
+            padding: 10px;
+            overflow-y: auto;
+            font-family: 'SF Mono', 'Monaco', monospace;
+            font-size: 13px;
+        }
+        
+        .log-entry {
+            margin: 2px 0;
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .log-timestamp {
+            color: #8b949e;
+            font-size: 11px;
+        }
+        
+        .log-level {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .log-level.info { background: #1f6feb; color: white; }
+        .log-level.success { background: #2ea043; color: white; }
+        .log-level.warning { background: #fb8500; color: white; }
+        .log-level.error { background: #da3633; color: white; }
+        .log-level.debug { background: #6e40c9; color: white; }
+        
+        .log-message {
+            flex: 1;
+            color: #f0f6fc;
+        }
+        
+        .log-source {
+            color: #58a6ff;
+            font-size: 11px;
+        }
+        
+        /* 浮动操作面板 */
+        .floating-panel {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background: rgba(22, 27, 34, 0.95);
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+        
+        .panel-title {
+            color: #f0f6fc;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .action-btn {
+            display: block;
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            background: #21262d;
+            color: #f0f6fc;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .action-btn:hover {
+            background: #30363d;
+            border-color: #58a6ff;
+        }
+    </style>
+</head>
+<body>
+    <!-- 状态栏 -->
+    <div class="status-bar">
+        <div class="status-item">
+            <span class="status-indicator active"></span>
+            <span>System: Online</span>
+        </div>
+        <div class="status-item">
+            <span class="status-indicator active"></span>
+            <span>API: 5000</span>
+        </div>
+        <div class="status-item">
+            <span class="status-indicator active"></span>
+            <span>Frontend: 8000</span>
+        </div>
+        <div class="status-item">
+            <span id="clock"></span>
+        </div>
+    </div>
+    
+    <!-- 主内容 -->
+    <div class="main-content">
+        <!-- 应用视图 -->
+        <iframe src="/index.html" class="app-view" id="appFrame"></iframe>
+        
+        <!-- CELL监控 -->
+        <div class="cell-monitor">
+            <h3 style="color: #f0f6fc; margin-bottom: 20px;">CELL Monitor</h3>
+            
+            <div class="cell-card">
+                <div class="cell-header">
+                    <span class="cell-name">🔐 Auth CELL</span>
+                    <span class="cell-status running">Running</span>
+                </div>
+                <div class="cell-metrics">
+                    <div class="metric">Requests: <span class="metric-value">1,234</span></div>
+                    <div class="metric">Success: <span class="metric-value">99.8%</span></div>
+                    <div class="metric">Latency: <span class="metric-value">23ms</span></div>
+                    <div class="metric">Users: <span class="metric-value">8</span></div>
+                </div>
+            </div>
+            
+            <div class="cell-card">
+                <div class="cell-header">
+                    <span class="cell-name">💰 Payment CELL</span>
+                    <span class="cell-status running">Running</span>
+                </div>
+                <div class="cell-metrics">
+                    <div class="metric">Transactions: <span class="metric-value">56</span></div>
+                    <div class="metric">Volume: <span class="metric-value">¥12,800</span></div>
+                    <div class="metric">Success: <span class="metric-value">100%</span></div>
+                    <div class="metric">Queue: <span class="metric-value">0</span></div>
+                </div>
+            </div>
+            
+            <div class="cell-card">
+                <div class="cell-header">
+                    <span class="cell-name">📊 Analytics CELL</span>
+                    <span class="cell-status running">Running</span>
+                </div>
+                <div class="cell-metrics">
+                    <div class="metric">Events: <span class="metric-value">5,678</span></div>
+                    <div class="metric">Sessions: <span class="metric-value">234</span></div>
+                    <div class="metric">CPU: <span class="metric-value">12%</span></div>
+                    <div class="metric">Memory: <span class="metric-value">256MB</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 调试控制台 -->
+    <div class="debug-console">
+        <div class="console-tabs">
+            <button class="console-tab active" onclick="switchTab('all')">All Logs</button>
+            <button class="console-tab" onclick="switchTab('frontend')">Frontend</button>
+            <button class="console-tab" onclick="switchTab('backend')">Backend</button>
+            <button class="console-tab" onclick="switchTab('cell')">CELL Events</button>
+            <button class="console-tab" onclick="switchTab('network')">Network</button>
+        </div>
+        <div class="console-content" id="consoleContent"></div>
+    </div>
+    
+    <!-- 浮动操作面板 -->
+    <div class="floating-panel">
+        <div class="panel-title">Quick Actions</div>
+        <button class="action-btn" onclick="clearLogs()">Clear Logs</button>
+        <button class="action-btn" onclick="exportLogs()">Export Logs</button>
+        <button class="action-btn" onclick="testLogin()">Test Login</button>
+        <button class="action-btn" onclick="testPayment()">Test Payment</button>
+        <button class="action-btn" onclick="restartCells()">Restart CELLs</button>
+    </div>
+    
+    <script>
+        const API_URL = 'http://192.168.1.17:5000';
+        let currentTab = 'all';
+        let logs = [];
+        
+        // 时钟更新
+        function updateClock() {
+            document.getElementById('clock').textContent = new Date().toLocaleString();
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+        
+        // 日志系统
+        function log(message, level = 'info', source = 'system') {
+            const entry = {
+                timestamp: new Date().toLocaleTimeString(),
+                level: level,
+                message: message,
+                source: source
+            };
+            
+            logs.push(entry);
+            
+            if (currentTab === 'all' || currentTab === source) {
+                addLogToConsole(entry);
+            }
+            
+            // 发送到后端
+            fetch(`${API_URL}/api/log`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(entry)
+            }).catch(() => {});
+        }
+        
+        function addLogToConsole(entry) {
+            const consoleContent = document.getElementById('consoleContent');
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.innerHTML = `
+                <span class="log-timestamp">${entry.timestamp}</span>
+                <span class="log-level ${entry.level}">${entry.level}</span>
+                <span class="log-message">${entry.message}</span>
+                <span class="log-source">[${entry.source}]</span>
+            `;
+            consoleContent.appendChild(logEntry);
+            consoleContent.scrollTop = consoleContent.scrollHeight;
+        }
+        
+        // Tab切换
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.console-tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            const consoleContent = document.getElementById('consoleContent');
+            consoleContent.innerHTML = '';
+            
+            logs.filter(log => tab === 'all' || log.source === tab)
+                .forEach(log => addLogToConsole(log));
+        }
+        
+        // 操作函数
+        function clearLogs() {
+            logs = [];
+            document.getElementById('consoleContent').innerHTML = '';
+            log('Console cleared', 'info');
+        }
+        
+        function exportLogs() {
+            const blob = new Blob([JSON.stringify(logs, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `hopehub_logs_${Date.now()}.json`;
+            a.click();
+            log('Logs exported', 'success');
+        }
+        
+        async function testLogin() {
+            log('Testing login...', 'info', 'frontend');
+            
+            try {
+                const response = await fetch(`${API_URL}/api/login`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        email: 'zhang@test.com',
+                        password: '123456'
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    log(`Login successful: ${result.user.username}`, 'success', 'backend');
+                } else {
+                    log(`Login failed: ${result.message}`, 'error', 'backend');
+                }
+            } catch (e) {
+                log(`Network error: ${e.message}`, 'error', 'network');
+            }
+        }
+        
+        function testPayment() {
+            log('Testing payment flow...', 'info', 'cell');
+            setTimeout(() => log('Payment CELL activated', 'info', 'cell'), 500);
+            setTimeout(() => log('Processing transaction...', 'info', 'cell'), 1000);
+            setTimeout(() => log('Payment successful: ¥100', 'success', 'cell'), 1500);
+        }
+        
+        function restartCells() {
+            log('Restarting all CELLs...', 'warning', 'system');
+            ['Auth', 'Payment', 'Analytics'].forEach((cell, i) => {
+                setTimeout(() => {
+                    log(`${cell} CELL stopped`, 'warning', 'cell');
+                    setTimeout(() => {
+                        log(`${cell} CELL started`, 'success', 'cell');
+                    }, 1000);
+                }, i * 500);
+            });
+        }
+        
+        // 监听iframe事件
+        document.getElementById('appFrame').addEventListener('load', function() {
+            log('Application loaded', 'success', 'frontend');
+            
+            // 注入日志脚本到iframe
+            try {
+                const iframeDoc = this.contentDocument || this.contentWindow.document;
+                const script = iframeDoc.createElement('script');
+                script.textContent = `
+                    // 拦截所有点击事件
+                    document.addEventListener('click', function(e) {
+                        if (e.target.tagName === 'BUTTON' || e.target.tagName === 'A') {
+                            parent.postMessage({
+                                type: 'log',
+                                message: 'Clicked: ' + e.target.textContent,
+                                level: 'info',
+                                source: 'frontend'
+                            }, '*');
+                        }
+                    });
+                    
+                    // 拦截console.log
+                    const originalLog = console.log;
+                    console.log = function(...args) {
+                        parent.postMessage({
+                            type: 'log',
+                            message: args.join(' '),
+                            level: 'debug',
+                            source: 'frontend'
+                        }, '*');
+                        originalLog.apply(console, args);
+                    };
+                `;
+                iframeDoc.head.appendChild(script);
+            } catch(e) {
+                log('Cannot inject logging to iframe: ' + e.message, 'warning');
+            }
+        });
+        
+        // 接收来自iframe的消息
+        window.addEventListener('message', function(e) {
+            if (e.data.type === 'log') {
+                log(e.data.message, e.data.level, e.data.source);
+            }
+        });
+        
+        // 初始化日志
+        log('Super Debug CELL initialized', 'success', 'system');
+        log('Roll Principle activated', 'info', 'system');
+        log('All CELLs online', 'success', 'cell');
+        
+        // 模拟实时日志
+        setInterval(() => {
+            const events = [
+                {msg: 'Health check passed', level: 'info', source: 'backend'},
+                {msg: 'Cache hit ratio: 92%', level: 'debug', source: 'backend'},
+                {msg: 'User activity detected', level: 'info', source: 'frontend'},
+                {msg: 'Database query: 12ms', level: 'debug', source: 'backend'},
+                {msg: 'Session renewed', level: 'info', source: 'cell'}
+            ];
+            
+            const event = events[Math.floor(Math.random() * events.length)];
+            log(event.msg, event.level, event.source);
+        }, 5000);
+    </script>
+</body>
+</html>

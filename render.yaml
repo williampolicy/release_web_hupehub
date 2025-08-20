@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: hopehub-api
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: "pip install flask flask-cors stripe"
+    startCommand: "cd production && python stripe_server.py"
+    envVars:
+      - key: STRIPE_SECRET_KEY
+        value: sk_test_51PytZfCdh5c7XDJbzyKGKaM1gQ4ZmHv7fl0KbUd3htuQtc2xhjuAYmyntiFnfbrOvxUstg4QieVEBvVjFlb9lHhp0071q2E9Sm
+      - key: STRIPE_PUBLISHABLE_KEY
+        value: pk_test_51PytZfCdh5c7XDJbxFrbSaZX55doWLbrZ77iutZTR8vlrQcogvQJSFNWkH4fJbqDzZo551D2ZSsw6dqFvQt9btrc00C0B2mrqr
+    
+  - type: static
+    name: hopehub-frontend
+    staticPublishPath: ./website
+    region: oregon
+    plan: free
