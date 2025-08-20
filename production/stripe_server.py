@@ -1,31 +1,45 @@
 #!/usr/bin/env python3
-"""
-HopeHub服务器 - 包含Stripe支付
-Phase 7 - 完整版本
-"""
-
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
-import sqlite3
-import stripe
 import os
+import stripe
 from datetime import datetime
+import sqlite3
 
 app = Flask(__name__)
 CORS(app)
 
-DATABASE = 'production.db'
+# 环境变量
+STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', 'sk_test_51PytZfCdh5c7XDJbzyKGKaM1gQ4ZmHv7fl0KbUd3htuQtc2xhjuAYmyntiFnfbrOvxUstg4QieVEBvVjFlb9lHhp0071q2E9Sm')
+STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', 'pk_test_51PytZfCdh5c7XDJbxFrbSaZX55doWLbrZ77iutZTR8vlrQcogvQJSFNWkH4fJbqDzZo551D2ZSsw6dqFvQt9btrc00C0B2mrqr')
 
-# Stripe配置
-stripe.api_key = os.getenv('STRIPE_SECRET_KEY', 'sk_test_51PytZfCdh5c7XDJbzyKGKaM1gQ4ZmHv7fl0KbUd3htuQtc2xhjuAYmyntiFnfbrOvxUstg4QieVEBvVjFlb9lHhp0071q2E9Sm')
-STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY', 'pk_test_51PytZfCdh5c7XDJbxFrbSaZX55doWLbrZ77iutZTR8vlrQcogvQJSFNWkH4fJbqDzZo551D2ZSsw6dqFvQt9btrc00C0B2mrqr')
+stripe.api_key = STRIPE_SECRET_KEY
+
+DATABASE = 'production.db'
 
 def get_db():
     conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
     return conn
 
-# ========== 原有端点 ==========
+# 根路径 - 解决Render 404
+@app.route('/')
+def index():
+    """根路径健康检查"""
+    return jsonify({
+        "status": "healthy",
+        "service": "HopeHub API",
+        "message": "Welcome to HopeHub - Your Exclusive Business Position Platform",
+        "version": "2.1",
+        "endpoints": {
+            "health": "/api/health",
+            "positions": "/api/positions",
+            "stripe_config": "/api/stripe_config",
+            "create_payment": "/api/create_payment",
+            "login": "/api/login",
+            "register": "/api/register"
+        }
+    })
 
 @app.route('/api/health')
 def health():
@@ -33,76 +47,57 @@ def health():
     return jsonify({
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
-        "service": "HopeHub API with Stripe",
-        "version": "2.0"
+        "service": "HopeHub API",
+        "version": "2.1",
+        "database": "connected" if check_db() else "error"
     })
+
+def check_db():
+    """检查数据库连接"""
+    try:
+        conn = get_db()
+        conn.execute('SELECT 1')
+        conn.close()
+        return True
+    except:
+        return False
 
 @app.route('/api/positions')
 def get_positions():
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM positions_v2')
-    positions = [dict(row) for row in cursor.fetchall()]
-    conn.close()
-    return jsonify(positions)
+    """获取位置列表"""
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM positions_v2 LIMIT 20')
+        positions = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        return jsonify(positions)
+    except:
+        # 返回示例数据
+        positions = [
+            {"id": 1, "zip_code": "10001", "industry": "Tech", "price": 100, "status": "available"},
+            {"id": 2, "zip_code": "10002", "industry": "Retail", "price": 80, "status": "available"},
+            {"id": 3, "zip_code": "94102", "industry": "Finance", "price": 150, "status": "available"}
+        ]
+        return jsonify(positions)
 
-@app.route('/api/login', methods=['POST'])
-def login():
-    data = request.json
-    email = data.get('email')
-    password = data.get('password')
-    
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM users WHERE email = ?', (email,))
-    user = cursor.fetchone()
-    conn.close()
-    
-    if user:
-        return jsonify({
-            "success": True,
-            "user": {
-                "id": user['id'],
-                "username": user['username'],
-                "email": user['email'],
-                "points": user['points']
-            }
-        })
-    else:
-        return jsonify({
-            "success": True,
-            "user": {
-                "id": 1,
-                "username": email.split('@')[0] if email else 'demo',
-                "email": email,
-                "points": 1000
-            }
-        })
-
-@app.route('/api/register', methods=['POST'])
-def register():
-    return jsonify({"success": True, "message": "注册成功"})
-
-@app.route('/api/recharge', methods=['POST'])
-def recharge():
-    return jsonify({"success": True, "points": 1000})
-
-@app.route('/api/buy_position', methods=['POST'])
-def buy_position():
-    return jsonify({"success": True, "message": "购买成功"})
-
-# ========== Stripe支付端点 ==========
+@app.route('/api/stripe_config')
+def stripe_config():
+    """获取Stripe配置"""
+    return jsonify({
+        "publishable_key": STRIPE_PUBLISHABLE_KEY,
+        "configured": True
+    })
 
 @app.route('/api/create_payment', methods=['POST'])
 def create_payment():
-    """创建Stripe支付会话"""
+    """创建支付会话"""
     try:
-        data = request.json
-        user_id = data.get('user_id', 1)
-        position_id = data.get('position_id', 1)
+        data = request.json or {}
         amount = data.get('amount', 10)
+        position_id = data.get('position_id', 1)
         
-        # 创建Stripe Checkout Session
+        # 创建Stripe会话
         session = stripe.checkout.Session.create(
             payment_method_types=['card'],
             line_items=[{
@@ -110,19 +105,15 @@ def create_payment():
                     'currency': 'usd',
                     'product_data': {
                         'name': f'HopeHub Position #{position_id}',
-                        'description': f'独家位置购买 - 用户{user_id}',
+                        'description': 'Exclusive business position'
                     },
-                    'unit_amount': int(amount * 100),
+                    'unit_amount': amount * 100,  # Stripe使用分为单位
                 },
                 'quantity': 1,
             }],
             mode='payment',
-            success_url='http://192.168.1.17:8000/payment_success.html?session_id={CHECKOUT_SESSION_ID}',
-            cancel_url='http://192.168.1.17:8000/payment_cancel.html',
-            metadata={
-                'user_id': str(user_id),
-                'position_id': str(position_id)
-            }
+            success_url='https://hopehub.x1000.ai/payment_success.html?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url='https://hopehub.x1000.ai/payment_cancel.html',
         )
         
         return jsonify({
@@ -130,65 +121,38 @@ def create_payment():
             'session_id': session.id,
             'checkout_url': session.url
         })
-        
     except Exception as e:
-        print(f"Stripe error: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e)
-        }), 500
+        }), 400
 
-@app.route('/api/verify_payment', methods=['POST'])
-def verify_payment():
-    """验证支付状态"""
-    try:
-        data = request.json
-        session_id = data.get('session_id')
-        
-        if not session_id:
-            return jsonify({'success': False, 'error': 'No session_id provided'})
-        
-        session = stripe.checkout.Session.retrieve(session_id)
-        
-        if session.payment_status == 'paid':
-            # 更新数据库
-            conn = get_db()
-            cursor = conn.cursor()
-            cursor.execute(
-                'UPDATE positions_v2 SET owner = ?, status = ? WHERE id = ?',
-                (session.metadata.get('user_id'), 'sold', session.metadata.get('position_id'))
-            )
-            conn.commit()
-            conn.close()
-            
-            return jsonify({
-                'success': True,
-                'paid': True,
-                'metadata': session.metadata
-            })
-        else:
-            return jsonify({
-                'success': True,
-                'paid': False
-            })
-            
-    except Exception as e:
-        print(f"Verify error: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@app.route('/api/stripe_config')
-def stripe_config():
-    """获取Stripe公钥配置"""
+@app.route('/api/login', methods=['POST'])
+def login():
+    """用户登录"""
+    data = request.json or {}
+    email = data.get('email', '')
+    
+    # 模拟登录成功
     return jsonify({
-        'publishable_key': STRIPE_PUBLISHABLE_KEY
+        "success": True,
+        "user": {
+            "id": 1,
+            "email": email,
+            "username": email.split('@')[0],
+            "points": 1000
+        }
+    })
+
+@app.route('/api/register', methods=['POST'])
+def register():
+    """用户注册"""
+    data = request.json or {}
+    return jsonify({
+        "success": True,
+        "message": "Registration successful"
     })
 
 if __name__ == '__main__':
-    print("Starting HopeHub API Server with Stripe...")
-    print("Stripe API Key:", stripe.api_key[:20] + "...")
-    print("Health endpoint: http://localhost:5000/api/health")
-    print("Stripe payment: http://localhost:5000/api/create_payment")
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
